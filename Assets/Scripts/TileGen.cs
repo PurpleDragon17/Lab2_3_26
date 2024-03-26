@@ -5,6 +5,8 @@ using UnityEngine;
 [RequireComponent(typeof(MeshFilter), typeof(MeshRenderer))]
 public class TileGen : MonoBehaviour
 {
+   
+
     //Code based on example scense 6
     private int xWidth;
     private int zWidth;
@@ -50,17 +52,26 @@ public class TileGen : MonoBehaviour
 
     private GameObject[] lel;
 
+    
+
+    // public int[] heightvalues;
+
+    //public float[,] heightMap;
+
+   
+
+
 
     private void Start()
     {
         lel = GameObject.FindGameObjectsWithTag("LVL");
         lvl = lel[0];
-        //Calls something in a scene that you donraly can't put in a prefab's script 
-        GenerateTile();
+        //GenerateTile();
       
     }
-    void GenerateTile()
+    public TileMapData GenerateTile()
     {
+       // LvGen meow = lvl.GetComponent<LvGen>();
         Vector3[] meshVertices = this.meshFilter.mesh.vertices;
         int tileDepth = (int)Mathf.Sqrt(meshVertices.Length);
         int tileWidth = tileDepth;
@@ -68,14 +79,15 @@ public class TileGen : MonoBehaviour
         float offsetX = -this.gameObject.transform.position.x;
         float offsetZ = -this.gameObject.transform.position.z;
         float[,] heightMap = this.noiseMapGeneration.GenerateNoiseMap(tileDepth, tileWidth, this.mapScale, offsetX, offsetZ, waves);
+       //Getting the Hightmap Here!!  
         Texture2D tileTexture = BuildTexture(heightMap);
         this.tileRenderer.material.mainTexture = tileTexture;
         UpdateMeshVertices(heightMap);
-        //The following code is to make the mesh combinding work 
-        MeshFilter meesh = GetComponent<MeshFilter>();
-       LvGen meow =lvl.GetComponent<LvGen>();
-        meow.tileMeshes.Add(meesh);
-        
+        TileMapData tileMapData = new TileMapData(heightMap);
+        return tileMapData;
+      
+
+
     }
 
     private Texture2D BuildTexture(float[,] heightMap)
@@ -123,7 +135,9 @@ public class TileGen : MonoBehaviour
         }
         return terrainTypes[terrainTypes.Length - 1];
     }
-    private void UpdateMeshVertices(float[,] heightMap)
+
+   
+        private void UpdateMeshVertices(float[,] heightMap)
     {
         int tileDepth = heightMap.GetLength(0);
         int tileWidth = heightMap.GetLength(1);
@@ -142,10 +156,86 @@ public class TileGen : MonoBehaviour
             }
         }
 
+        // Update the mesh vertices
         this.meshFilter.mesh.vertices = meshVertices;
         this.meshFilter.mesh.RecalculateBounds();
         this.meshFilter.mesh.RecalculateNormals();
         this.meshCollider.sharedMesh = this.meshFilter.mesh;
 
+       
+
+    }
+}
+public class TileMapData
+{
+  
+    public float[,] heightMap;
+    public Dictionary<Vector2Int, float[,]> heightmaps = new Dictionary<Vector2Int, float[,]>();
+    public List<Vector2Int> generationOrder = new List<Vector2Int>();
+
+    // Set the height map data
+    public TileMapData(float[,] heightMap)
+    {
+        this.heightMap = heightMap;
+    }
+
+    public void SetHeightmapData(Vector2Int tilePosition, float[,] heightmap)
+    {
+        if (!heightmaps.ContainsKey(tilePosition))
+        {
+            heightmaps.Add(tilePosition, heightmap);
+            generationOrder.Add(tilePosition);
+        }
+        else
+        {
+            Debug.LogWarning("Heightmap data already exists for tile at position " + tilePosition);
+        }
+    }
+
+    // Method to retrieve height value at a specific position
+    public float[,] GetHeightmapData(Vector2Int tilePosition)
+    {
+        if (heightmaps.ContainsKey(tilePosition))
+        {
+            return heightmaps[tilePosition];
+        }
+        else
+        {
+            Debug.LogWarning("No heightmap data found for tile at position " + tilePosition);
+            return null;
+        }
+    }
+    public List<Vector2Int> GetGenerationOrder()
+    {
+        return generationOrder;
+    }
+    public Dictionary<Vector2Int, float[,]> tileHeightMaps = new Dictionary<Vector2Int, float[,]>();
+
+    // Method to set heightmap data for a specific tile
+    public void SetTileHeightMapData(Vector2Int tilePosition, float[,] heightMapData)
+    {
+        if (tileHeightMaps.ContainsKey(tilePosition))
+        {
+            // Tile already exists, so update its heightmap data
+            tileHeightMaps[tilePosition] = heightMapData;
+        }
+        else
+        {
+            // Tile doesn't exist, so add it along with its heightmap data
+            tileHeightMaps.Add(tilePosition, heightMapData);
+        }
+
+    }
+    public float[,] GetTileHeightMapData(Vector2Int tilePosition)
+    {
+        if (tileHeightMaps.ContainsKey(tilePosition))
+        {
+            return tileHeightMaps[tilePosition];
+        }
+        else
+        {
+            Debug.LogWarning("No heightmap data found for tile at position " + tilePosition);
+            return null;
+        }
     }
 }
